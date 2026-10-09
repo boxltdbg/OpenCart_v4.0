@@ -1,0 +1,335 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <h1>{{ heading_title_report }}</h1>
+      <ol class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+          <li class="breadcrumb-item"><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+    {% if error %}
+      <div class="alert alert-danger alert-dismissible"><i class="fa-solid fa-circle-exclamation"></i> {{ error }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endif %}
+
+    {% if success %}
+      <div class="alert alert-success alert-dismissible"><i class="fa-solid fa-circle-check"></i> {{ success }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover mb-0">
+          <thead>
+            <tr>
+              <td style="width:1%"></td>
+              <td class="text-center" style="width:1%">{{ column_order_id }}</td>
+              <td class="text-start">{{ column_customer }}</td>
+              <td class="text-center" style="width:1%">{{ column_order_status }}</td>
+              <td class="text-center" style="width:1%">{{ column_total }}</td>
+              <td class="text-center" style="width:1%">{{ column_total_products }}</td>
+              <td class="text-center" style="width:1%">{{ column_date_added }}</td>
+              <td class="text-start">{{ column_vouchers }}</td>
+              <td class="text-center" style="width:15%">{{ column_info }}</td>
+              <td class="text-center" style="width:1%">{{ column_locker_id }}</td>
+              <td class="text-center" style="width:1%">{{ column_box_now_status }}</td>
+            </tr>
+          </thead>
+          <tbody>
+            {% if orders %}
+              {% for order in orders %}
+                <tr class="boxnow-row">
+                  <td>
+                    <a href="{{ order.view }}" data-bs-toggle="tooltip" title="{{ button_view }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-eye"></i></a>
+                  </td>
+                  <td class="text-center" data-order-id="{{ order.order_id }}">{{ order.order_id }}</td>
+                  <td class="text-start">{{ order.customer }}</td>
+                  <td class="text-center">{{ order.order_status }}</td>
+                  <td class="text-center">{{ order.total }}</td>
+                  <td class="text-center">{{ order.products }}</td>
+                  <td class="text-center">{{ order.date_added }}</td>
+                  <td class="text-start parcels-td">
+                    {% if order.boxnow_parcels %}
+                      {% for boxnow_parcel in order.boxnow_parcels %}
+                        <a href="https://track.boxnow.bg/?track={{ boxnow_parcel.id }}" target="_blank"><i class="fa-solid fa-circle-info"></i> {{ boxnow_parcel.id }}</a>
+                      {% endfor %}
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    {{ order.boxnow_status_message }}
+                    {% if order.boxnow_parcels %}
+                      {% for boxnow_parcel in order.boxnow_parcels %}
+                        <a href="index.php?route=extension/boxnow/shipping/boxnow.getParcel&parcel_id={{ boxnow_parcel.id }}&user_token={{ user_token }}" target="_blank"><i class="fa-solid fa-file"></i> {{ boxnow_parcel.id }}</a>
+                      {% endfor %}
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    <div class="d-flex align-items-center justify-content-center gap-1">
+                      <input type="text" class="form-control form-control-sm locker-id" value="{{ order.boxnow_locker_id }}" placeholder="ID" style="width:70px;"/>
+                      <button type="button" title="{{ entry_select_warehouse }}" class="btn btn-info btn-sm locker-id-button"><i class="fa-solid fa-location-dot"></i></button>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    {% if order.boxnow_status == 1 %}
+                      <div class="mb-1"><span class="text-success"><i class="fa-solid fa-circle-check"></i> {{ text_voucher_success }}</span></div>
+                      <a href="{{ order.boxnow_cancel }}" class="btn btn-danger btn-sm boxnow-cancel"><i class="fa-solid fa-ban"></i> {{ text_voucher_cancel }}</a>
+                    {% elseif order.boxnow_status == 3 %}
+                      <span class="text-muted"><i class="fa-solid fa-ban"></i> {{ text_voucher_cancelled }}</span>
+                    {% else %}
+                      {# Covers both "pending" (status 2) and "no waybill yet" (no boxnow_requests row at all) —
+                         a waybill can be created from here regardless of whether checkout managed to record a locker. #}
+                      <div class="text-info mb-1"><i class="fa-solid fa-circle-minus"></i> {{ text_voucher_pending }}</div>
+                      <table class="table table-sm mb-0">
+                        <tbody>
+                          {# Only needed when the order arrived without a phone (telephone field
+                             disabled at checkout) — otherwise the order's own phone is used. #}
+                          {% if not order.telephone %}
+                            <tr>
+                              <td class="text-nowrap text-start">{{ entry_customer_telephone }}</td>
+                              <td>
+                                <input type="text" class="form-control form-control-sm customer-telephone" value="" placeholder="+359..." style="min-width:190px;"/>
+                              </td>
+                            </tr>
+                          {% endif %}
+                          <tr>
+                            <td class="text-nowrap text-start">{{ entry_select_warehouse }}</td>
+                            <td>
+                              <select class="form-select form-select-sm warehouse-number" style="min-width:190px;">
+                                {% for key, value in warehouse_number %}
+                                  <option value="{{ key }}">{{ value }}</option>
+                                {% endfor %}
+                              </select>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td class="text-nowrap text-start">{{ entry_compartment_size }}</td>
+                            <td>
+                              <select class="form-select form-select-sm compartment-size" style="min-width:190px;">
+                                <option value="1">{{ entry_compartment_small }}</option>
+                                <option value="2">{{ entry_compartment_medium }}</option>
+                                <option value="3" selected>{{ entry_compartment_large }}</option>
+                              </select>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td colspan="2" class="border-0 text-end">
+                              <a class="btn btn-info btn-sm boxnow-submit" href="{{ order.boxnow_submit }}"><i class="fa-solid fa-paper-plane"></i> {{ text_voucher_send }}</a>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td class="text-center" colspan="11">{{ text_no_results }}</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-sm-6 text-start">{{ pagination }}</div>
+      <div class="col-sm-6 text-end">{{ results }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal-boxnow-map" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fa-solid fa-location-dot"></i> BOX NOW</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="modal-boxnow-map-body"></div>
+    </div>
+  </div>
+</div>
+
+<style type="text/css">
+	.parcels-td a + a:before {
+		content: ",";
+	}
+</style>
+
+<script type="text/javascript"><!--
+document.addEventListener('DOMContentLoaded', function() {
+	var modalEl = document.getElementById('modal-boxnow-map');
+	var modalBody = document.getElementById('modal-boxnow-map-body');
+	var modal = new bootstrap.Modal(modalEl);
+	var activeRow = null;
+	var mapEl = null;
+	var saveLockerUrl = {{ save_locker|json_encode|raw }};
+
+	// Persists the locker ID against the order straight away (independently of
+	// "Create waybill"), whether it came from the map or was typed in manually.
+	function saveLocker(row) {
+		var orderCell = row.querySelector('[data-order-id]');
+		var lockerInput = row.querySelector('.locker-id');
+
+		if (!orderCell || !lockerInput || !lockerInput.value) {
+			return;
+		}
+
+		lockerInput.classList.remove('is-valid', 'is-invalid');
+
+		// The outcome is shown on the input itself (green/red border) and logged to
+		// the console, so a failed save is never silent.
+		fetch(saveLockerUrl, {
+			method: 'POST',
+			headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+			body: 'order_id=' + encodeURIComponent(orderCell.dataset.orderId) + '&locker_id=' + encodeURIComponent(lockerInput.value)
+		}).then(function(response) {
+			return response.text().then(function(text) {
+				var json = null;
+
+				try {
+					json = JSON.parse(text);
+				} catch (e) {}
+
+				if (json && json.success) {
+					lockerInput.classList.add('is-valid');
+				} else {
+					lockerInput.classList.add('is-invalid');
+
+					console.error('BOX NOW saveLocker failed', response.status, response.url, json || text.substring(0, 300));
+				}
+			});
+		}).catch(function(error) {
+			lockerInput.classList.add('is-invalid');
+
+			console.error('BOX NOW saveLocker failed', error);
+		});
+	}
+
+	// Just like the checkout widget: create the map element once, load the
+	// vendor script against it once while off-screen (but fully laid out), then
+	// only ever move that same element in and out of the modal afterwards —
+	// the vendor script reliably sizes itself only on its first execution
+	// against a real element.
+	function parkMap() {
+		if (!mapEl) {
+			return;
+		}
+
+		mapEl.style.position = 'fixed';
+		mapEl.style.left = '-9999px';
+		mapEl.style.top = '0';
+		mapEl.style.width = '600px';
+		mapEl.style.height = '480px';
+
+		if (mapEl.parentNode !== document.body) {
+			document.body.appendChild(mapEl);
+		}
+	}
+
+	function mountMap() {
+		if (!mapEl) {
+			return;
+		}
+
+		mapEl.style.position = 'static';
+		mapEl.style.left = '';
+		mapEl.style.top = '';
+		mapEl.style.width = '100%';
+		mapEl.style.height = '480px';
+
+		modalBody.appendChild(mapEl);
+	}
+
+	function initMap() {
+		mapEl = document.createElement('div');
+		mapEl.id = 'boxnowmap';
+
+		parkMap();
+
+		window._bn_map_widget_config = {
+			partnerId: {{ partner_id|json_encode|raw }},
+			autoshow: true,
+			parentElement: '#boxnowmap',
+			afterSelect: function(selected) {
+				if (selected.boxnowLockerId && activeRow) {
+					activeRow.querySelector('.locker-id').value = selected.boxnowLockerId;
+
+					saveLocker(activeRow);
+				}
+
+				modal.hide();
+			}
+		};
+
+		var script = document.createElement('script');
+
+		script.src = 'https://widget-cdn.boxnow.bg/map-widget/client/v4.js';
+		script.async = true;
+
+		document.getElementsByTagName('head')[0].appendChild(script);
+	}
+
+	initMap();
+
+	document.querySelectorAll('.locker-id-button').forEach(function(button) {
+		button.addEventListener('click', function() {
+			activeRow = button.closest('tr');
+
+			modal.show();
+		});
+	});
+
+	document.querySelectorAll('.locker-id').forEach(function(input) {
+		input.addEventListener('blur', function() {
+			saveLocker(input.closest('tr'));
+		});
+	});
+
+	modalEl.addEventListener('shown.bs.modal', function() {
+		mountMap();
+	});
+
+	modalEl.addEventListener('hidden.bs.modal', function() {
+		parkMap();
+	});
+
+	document.querySelectorAll('.boxnow-submit').forEach(function(link) {
+		link.addEventListener('click', function(e) {
+			e.preventDefault();
+
+			var row = link.closest('.boxnow-row');
+			var url = new URL(link.href, window.location.origin);
+
+			url.searchParams.set('warehouse_number', row.querySelector('.warehouse-number').value);
+			url.searchParams.set('locker_id', row.querySelector('.locker-id').value);
+			url.searchParams.set('compartment_size', row.querySelector('.compartment-size').value);
+
+			var telephoneInput = row.querySelector('.customer-telephone');
+
+			if (telephoneInput) {
+				url.searchParams.set('telephone', telephoneInput.value);
+			}
+
+			window.location.href = url.toString();
+		});
+	});
+
+	document.querySelectorAll('.boxnow-cancel').forEach(function(link) {
+		link.addEventListener('click', function(e) {
+			if (!confirm({{ text_voucher_cancel_confirm|json_encode|raw }})) {
+				e.preventDefault();
+			}
+		});
+	});
+});
+//--></script>
+{{ footer }}
